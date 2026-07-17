@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #0d1f45;
+  --navy-2: #14295c;
+  --gold: #c8a24a;
+  --gold-light: #e4c77a;
+  --field-bg: #e7ecf9;
+  --cream: #fdfbf6;
+}
+
+@theme inline {
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+}
+
+body {
+  font-family: var(--font-body), Arial, Helvetica, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+/* Printable field style: looks like the dotted/underlined + light-blue box
+   fields from the reference design, but is an editable input */
+.doc-field {
+  width: 100%;
+  background: var(--field-bg);
+  border: none;
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: 12px;
+  color: var(--navy);
+  outline: none;
+}
+.doc-field::placeholder {
+  color: #93a0c2;
+}
+.doc-field:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+.doc-field-sm {
+  font-size: 11px;
+  padding: 2px 6px;
+}
+
+.clip-corner {
+  clip-path: polygon(12% 0, 100% 0, 100% 100%, 0 100%);
+}
+
+@media print {
+  body {
+    background: white !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
