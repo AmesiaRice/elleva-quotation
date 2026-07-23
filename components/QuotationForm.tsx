@@ -17,6 +17,7 @@ import {
   Loader2,
   CheckCircle2,
   X,
+  Plus,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { amountInWords } from "@/lib/numberToWords";
@@ -132,13 +133,7 @@ export default function QuotationForm() {
   const [buyer, setBuyer] = useState(initialBuyer);
   const [quotation, setQuotation] = useState(initialQuotation);
   const [basisType, setBasisType] = useState<PriceBasisType>("ex-factory");
-  const [rows, setRows] = useState<ProductRow[]>([
-    emptyRow(nextRowId()),
-    emptyRow(nextRowId()),
-    emptyRow(nextRowId()),
-    emptyRow(nextRowId()),
-    emptyRow(nextRowId()),
-  ]);
+  const [rows, setRows] = useState<ProductRow[]>([emptyRow(nextRowId())]);
   const [commercial, setCommercial] = useState(initialCommercial);
   const [bank, setBank] = useState(initialBank);
   const [acceptance, setAcceptance] = useState(initialAcceptance);
@@ -195,19 +190,21 @@ export default function QuotationForm() {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   };
 
+  const addRow = () => {
+    setRows((prev) => [...prev, emptyRow(nextRowId())]);
+  };
+
+  const removeRow = (id: string) => {
+    setRows((prev) => (prev.length > 1 ? prev.filter((r) => r.id !== id) : prev));
+  };
+
   /* ---------------------------------- Reset ---------------------------------- */
 
   const resetForm = () => {
     setBuyer(initialBuyer);
     setQuotation(initialQuotation);
     setBasisType("ex-factory");
-    setRows([
-      emptyRow(nextRowId()),
-      emptyRow(nextRowId()),
-      emptyRow(nextRowId()),
-      emptyRow(nextRowId()),
-      emptyRow(nextRowId()),
-    ]);
+    setRows([emptyRow(nextRowId())]);
     setCommercial(initialCommercial);
     setBank((b) => ({ ...initialBank, upiId: b.upiId })); // keep UPI id for convenience
     setAcceptance(initialAcceptance);
@@ -274,6 +271,9 @@ export default function QuotationForm() {
 
       cloneField.replaceWith(replacement);
     });
+
+    // Strip anything marked no-print (e.g. the row delete buttons/column) from the captured clone.
+    clone.querySelectorAll<HTMLElement>(".no-print").forEach((el) => el.remove());
 
     return clone;
   };
@@ -405,12 +405,12 @@ export default function QuotationForm() {
           </div>
 
           <div className="flex-1 flex flex-col items-center justify-center text-center py-3 px-2">
-            <h1 className="font-display text-[38px] leading-none font-black text-[#0d1f45] tracking-wide">
+            {/* <h1 className="font-display text-[38px] leading-none font-black text-[#0d1f45] tracking-wide">
               ELLEVA
-            </h1>
-            <p className="text-[#c8a24a] font-bold tracking-[0.15em] text-[13px] mt-1">
+            </h1> */}
+            <h1 className="text-[#c8a24a] font-bold tracking-[0.15em] text-[20px] mt-1">
             ELLEVA GLOBAL FOOD IMPEX PVT LTD
-            </p>
+            </h1>
             <p className="italic text-[11px] text-[#3c4a72] mt-1">Manufacturer &amp; Exporter of</p>
             <p className="font-display font-bold text-[15px] text-[#0d1f45] tracking-wide">
               PREMIUM BASMATI RICE
@@ -587,7 +587,8 @@ export default function QuotationForm() {
                 <Th className="w-16">RATE<br />(₹)</Th>
                 <Th className="w-16">DISCOUNT<br />(₹)</Th>
                 <Th className="w-12">GST<br />(%)</Th>
-                <Th className="rounded-tr-md w-20">AMOUNT<br />(₹)</Th>
+                <Th className="w-20">AMOUNT<br />(₹)</Th>
+                {/* <Th className="rounded-tr-md w-6 no-print"></Th> */}
               </tr>
             </thead>
             <tbody>
@@ -652,11 +653,32 @@ export default function QuotationForm() {
                     <Td className="text-right font-semibold text-[#0d1f45] pr-2">
                       {c.amount > 0 ? rupee(c.amount) : ""}
                     </Td>
+                    <Td className="text-center no-print">
+                      {rows.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeRow(r.id)}
+                          className="text-red-400 hover:text-red-600"
+                          title="Remove row"
+                        >
+                          <X size={13} />
+                        </button>
+                      )}
+                    </Td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+
+          <button
+            type="button"
+            onClick={addRow}
+            className="no-print mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-[#0d1f45] border border-dashed border-[#c8a24a] rounded-full px-3 py-1.5 hover:bg-[#f4f6fb] transition"
+          >
+            <Plus size={13} className="text-[#c8a24a]" />
+            Add Row
+          </button>
         </div>
 
         {/* AMOUNT IN WORDS + TOTALS */}
