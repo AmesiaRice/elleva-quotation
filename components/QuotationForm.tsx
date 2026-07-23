@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import {
   MapPin,
@@ -143,6 +143,35 @@ export default function QuotationForm() {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "generating" | "saving" | "done" | "error">("idle");
   const [statusMsg, setStatusMsg] = useState("");
+
+  /* --------------------------- Mobile scale-to-fit --------------------------- */
+  // The document keeps its fixed 850px "print" width (so the PDF layout never
+  // changes across devices). On narrow screens we visually scale it down to
+  // fit the viewport instead of reflowing columns, so the professional layout
+  // stays identical on mobile and desktop. Users can still pinch-zoom to type.
+  const DOC_WIDTH = 850;
+  const docRef = useRef<HTMLDivElement>(null);
+  const [docScale, setDocScale] = useState(1);
+  const [docHeight, setDocHeight] = useState(0);
+
+  useEffect(() => {
+    const recalc = () => {
+      const el = docRef.current;
+      if (!el) return;
+      const parentWidth = el.parentElement?.clientWidth ?? DOC_WIDTH;
+      setDocScale(Math.min(1, parentWidth / DOC_WIDTH));
+      setDocHeight(el.scrollHeight);
+    };
+    recalc();
+    window.addEventListener("resize", recalc);
+    const ro = new ResizeObserver(recalc);
+    if (docRef.current) ro.observe(docRef.current);
+    return () => {
+      window.removeEventListener("resize", recalc);
+      ro.disconnect();
+    };
+    // Recalc height when row count (or other content that changes doc height) changes.
+  }, [rows.length]);
 
   /* ------------------------------- Calculations ------------------------------ */
 
@@ -378,7 +407,7 @@ export default function QuotationForm() {
   /* ----------------------------------- UI ------------------------------------ */
 
   return (
-    <div className="min-h-screen py-8 px-3 sm:px-6">
+    <div className="min-h-screen py-4 sm:py-8 px-2 sm:px-6 overflow-x-hidden">
       {/* Top toolbar */}
       {/* <div className="no-print max-w-[850px] mx-auto mb-4">
         <h1 className="font-display text-xl font-bold text-[#0d1f45]">Elleva Proforma Quotation</h1>
@@ -386,11 +415,23 @@ export default function QuotationForm() {
       </div> */}
 
       {/* ---------------------------- Printable document --------------------------- */}
-      <div
-        id="quotation-doc"
-        className="max-w-[850px] mx-auto bg-white shadow-xl text-[#12203f]"
-        style={{ fontFamily: "var(--font-body)" }}
-      >
+      {/*
+        Outer frame is fluid and centers the scaled document. The inner frame's
+        height is pinned to the scaled height so the page doesn't leave a big
+        empty gap below a shrunk document on mobile.
+      */}
+      <div className="mx-auto" style={{ maxWidth: DOC_WIDTH }}>
+        <div style={{ height: docScale && docHeight ? docHeight * docScale : undefined }}>
+          <div
+            id="quotation-doc"
+            ref={docRef}
+            className="bg-white shadow-xl text-[#12203f] origin-top-left"
+            style={{
+              fontFamily: "var(--font-body)",
+              width: DOC_WIDTH,
+              transform: `scale(${docScale})`,
+            }}
+          >
         {/* HEADER */}
         <div className="relative flex items-stretch overflow-hidden border-b-4 border-[#c8a24a]">
           <div className="flex items-center justify-center px-4 py-3 shrink-0">
@@ -588,7 +629,6 @@ export default function QuotationForm() {
                 <Th className="w-16">DISCOUNT<br />(₹)</Th>
                 <Th className="w-12">GST<br />(%)</Th>
                 <Th className="w-20">AMOUNT<br />(₹)</Th>
-                {/* <Th className="rounded-tr-md w-6 no-print"></Th> */}
               </tr>
             </thead>
             <tbody>
@@ -658,7 +698,7 @@ export default function QuotationForm() {
                         <button
                           type="button"
                           onClick={() => removeRow(r.id)}
-                          className="text-red-400 hover:text-red-600"
+                          className="text-red-400 hover:text-red-600 p-1.5 -m-1.5 touch-manipulation"
                           title="Remove row"
                         >
                           <X size={13} />
@@ -674,7 +714,7 @@ export default function QuotationForm() {
           <button
             type="button"
             onClick={addRow}
-            className="no-print mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-[#0d1f45] border border-dashed border-[#c8a24a] rounded-full px-3 py-1.5 hover:bg-[#f4f6fb] transition"
+            className="no-print mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-[#0d1f45] border border-dashed border-[#c8a24a] rounded-full px-3.5 py-2 hover:bg-[#f4f6fb] transition touch-manipulation"
           >
             <Plus size={13} className="text-[#c8a24a]" />
             Add Row
@@ -910,16 +950,18 @@ export default function QuotationForm() {
             )}
           </div>
         </div>
+          </div>
+        </div>
       </div>
 
       {/* SUBMIT BAR */}
-      <div className="no-print max-w-[850px] mx-auto mt-5 flex flex-col items-center gap-2">
+      <div className="no-print mx-auto mt-5 flex flex-col items-center gap-2 px-2" style={{ maxWidth: DOC_WIDTH }}>
         <button
           onClick={handleSubmit}
           disabled={status === "generating" || status === "saving"}
-          className="flex items-center gap-2 bg-[#0d1f45] hover:bg-[#14295c] disabled:opacity-60 text-white font-semibold px-6 py-3 rounded-full shadow-lg transition"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#0d1f45] hover:bg-[#14295c] disabled:opacity-60 text-white font-semibold text-sm sm:text-base px-5 sm:px-6 py-3 rounded-full shadow-lg transition touch-manipulation"
         >
-          {(status === "generating" || status === "saving") && <Loader2 size={16} className="animate-spin" />}
+          {(status === "generating" || status === "saving") && <Loader2 size={16} className="animate-spin shrink-0" />}
           {status === "generating"
             ? "Generating PDF..."
             : status === "saving"
@@ -928,11 +970,11 @@ export default function QuotationForm() {
         </button>
         {status !== "idle" && statusMsg && (
           <div
-            className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-full ${
+            className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-full text-center ${
               status === "error" ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-700"
             }`}
           >
-            {status === "error" ? <X size={13} /> : <CheckCircle2 size={13} />}
+            {status === "error" ? <X size={13} className="shrink-0" /> : <CheckCircle2 size={13} className="shrink-0" />}
             {statusMsg}
           </div>
         )}
